@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Acoustic Mechanic — Mobile Engine Diagnostic App</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            mech: {
+              950: '#070a12',
+              900: '#0b1120',
+              800: '#111a30',
+              700: '#1b2848',
+              cyan: '#06b6d4',
+              amber: '#f59e0b',
+              rose: '#f43f5e',
+              emerald: '#10b981',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    body {
+      background-color: #03060c;
+      color: #f1f5f9;
+      font-family: 'Inter', sans-serif;
+      touch-action: manipulation;
+    }
+    .glass-card {
+      background: rgba(17, 26, 48, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    .glass-card-interactive {
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card-interactive:active {
+      transform: scale(0.98);
+    }
+    /* Hide scrollbar for clean mobile appearance */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(6, 182, 212, 0.3); border-radius: 9999px; }
+    .screen {
+      display: none;
+      animation: fadeIn 0.25s ease-out forwards;
+    }
+    .screen.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-0 sm:p-4 bg-slate-950">
+
+  <!-- Mobile Phone Frame Wrapper -->
+  <div class="w-full max-w-md min-h-screen sm:min-h-[840px] sm:max-h-[900px] bg-mech-950 flex flex-col sm:rounded-[2.5rem] border-x sm:border border-white/15 shadow-2xl relative overflow-hidden sm:ring-8 sm:ring-black/40">
+
+    <!-- Mobile Top Status Bar & Notch -->
+    <div class="px-5 pt-3 pb-2 flex items-center justify-between text-[11px] font-mono text-slate-400 bg-mech-950 select-none z-30">
+      <span>12:45</span>
+      <!-- Notch Pill -->
+      <div class="w-24 h-4 bg-black rounded-full border border-white/10 flex items-center justify-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-cyan-400/80 animate-pulse"></span>
+        <span class="text-[9px] text-cyan-300 font-sans font-semibold">STETHOSCOPE</span>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+        <span class="text-[10px]">5G</span>
+        <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm11 1H6v8h8V6z" clip-rule="evenodd"/></svg>
+      </div>
+    </div>
+
+    <!-- App Header & Stage Stepper -->
+    <header class="px-5 py-2.5 bg-mech-900/90 border-b border-white/10 backdrop-blur-md z-30 shrink-0">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-md shadow-cyan-500/20">
+            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/>
+            </svg>
+          </div>
+          <div>
+            <span class="font-extrabold text-xs tracking-tight text-white block">ACOUSTIC MECHANIC</span>
+            <span class="text-[9px] text-cyan-400 font-mono" id="headerSubtext">Step 1: Vehicle Intelligence</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-1 bg-slate-900 px-2 py-0.5 rounded-full border border-white/10 text-[10px] font-mono text-cyan-300">
+          <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
+          <span id="headerStageBadge">1 / 4</span>
+        </div>
+      </div>
+
+      <!-- 4-Step Visual Progress Bar -->
+      <div class="grid grid-cols-4 gap-1.5">
+        <div id="stepBar1" class="h-1 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)] transition-all"></div>
+        <div id="stepBar2" class="h-1 rounded-full bg-slate-800 transition-all"></div>
+        <div id="stepBar3" class="h-1 rounded-full bg-slate-800 transition-all"></div>
+        <div id="stepBar4" class="h-1 rounded-full bg-slate-800 transition-all"></div>
+      </div>
+    </header>
+
+    <!-- Floating Audio Control & Stop Bar (Visible whenever audio is playing) -->
+    <div id="globalAudioBar" class="hidden px-4 py-2 bg-gradient-to-r from-rose-600 to-indigo-600 text-white flex items-center justify-between text-xs font-mono shadow-md z-30 animate-pulse">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
+        <span id="globalAudioLabel" class="font-bold">Sound Playing: 190 Hz Knock</span>
+      </div>
+      <button id="btnGlobalStopAudio" class="px-2.5 py-0.5 rounded-lg bg-black/60 hover:bg-black text-white font-bold text-[11px] border border-white/20 transition flex items-center gap-1 active:scale-95">
+        <span>⏹ STOP</span>
+      </button>
+    </div>
+
+
+    <!-- Main Scrollable Screen Viewport -->
+    <main class="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-24" id="screenViewport">
+
+      <!-- ========================================== -->
+      <!-- SCREEN 1: VEHICLE SETUP & VIN DECODER -->
+      <!-- ========================================== -->
+      <section id="screen1" class="screen active space-y-3.5">
+        <div>
+          <div class="text-cyan-400 text-[10px] font-bold font-mono tracking-wider uppercase mb-0.5">STEP 1 OF 4</div>
+          <h2 class="text-lg font-extrabold text-white leading-tight">Identify Your Vehicle</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Enter VIN or select make & model to pull factory engine specs.</p>
+        </div>
+
+        <!-- VIN Auto-Decode Card -->
+        <div class="glass-card p-3.5 rounded-2xl border border-white/10 bg-mech-900/90 shadow-md">
+          <label for="vinInput" class="text-[11px] font-bold text-white uppercase tracking-wider flex items-center justify-between mb-1.5">
+            <span class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+              VIN Auto-Lookup (10 Digits):
+            </span>
+            <span class="text-[9px] font-mono text-cyan-300">ISO 3779</span>
+          </label>
+          <div class="flex gap-2 mb-2">
+            <input type="text" id="vinInput" placeholder="e.g. 5TFJA5DB8P (2023 Tundra)" maxlength="17" class="bg-slate-950 border border-white/20 rounded-xl px-3 py-1.5 text-xs text-white font-mono uppercase w-full focus:outline-none focus:border-cyan-400">
+            <button id="btnDecodeVin" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-bold text-xs shrink-0 transition flex items-center gap-1 shadow-md shadow-cyan-500/20">
+              <span>Decode</span>
+            </button>
+          </div>
+          <!-- Quick VIN Samples -->
+          <div class="flex flex-wrap items-center gap-1 text-[10px] font-mono text-slate-400">
+            <span class="text-slate-500">Quick:</span>
+            <button class="sample-vin-btn px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10" data-vin="5TFJA5DB8P100234">2023 Tundra</button>
+            <button class="sample-vin-btn px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10" data-vin="5TBEY5F18B200456">2011 Tundra V8</button>
+            <button class="sample-vin-btn px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10" data-vin="JTMHT05J5J300789">2018 LC200</button>
+            <button class="sample-vin-btn px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/10" data-vin="JN8AY2NC7M400123">2021 Patrol</button>
+          </div>
+        </div>
+
+        <!-- 3-Tier Clean Dropdown Pickers (No Issue Spoilers) -->
+        <div class="glass-card p-3.5 rounded-2xl border border-white/10 space-y-2.5">
+          <div class="text-[11px] font-bold text-slate-300 uppercase tracking-wide flex items-center justify-between">
+            <span>Or Select from Catalog:</span>
+            <span class="text-[9px] font-mono text-cyan-400">GCC Fleet</span>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-mono text-slate-400 mb-1">1. Manufacturer / Make</label>
+            <select id="selectMake" class="w-full bg-slate-950 border border-white/20 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 font-medium">
+              <option value="toyota" selected>Toyota</option>
+              <option value="nissan">Nissan</option>
+              <option value="lexus">Lexus</option>
+              <option value="gmc">GMC / Chevrolet</option>
+              <option value="ford">Ford</option>
+              <option value="mitsubishi">Mitsubishi</option>
+              <option value="hyundai">Hyundai / Kia</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-mono text-slate-400 mb-1">2. Vehicle Model</label>
+            <select id="selectModel" class="w-full bg-slate-950 border border-white/20 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 font-medium">
+              <!-- Populated via JS -->
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-mono text-slate-400 mb-1">3. Model Year & Powertrain Engine</label>
+            <select id="selectYear" class="w-full bg-slate-950 border border-white/20 rounded-xl px-3 py-2 text-xs text-cyan-300 focus:outline-none focus:border-cyan-400 font-mono font-medium">
+              <!-- Populated via JS -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Active Vehicle Profile Card -->
+        <div class="p-3.5 rounded-2xl bg-mech-900 border border-white/10 text-xs">
+          <div class="flex items-center gap-2 mb-1.5">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+            <span class="text-[10px] uppercase font-bold text-slate-400">Active Powertrain Architecture:</span>
+          </div>
+          <h4 id="activeProfileName" class="font-bold text-white text-sm">Toyota Tundra Pickup (Gen 3)</h4>
+          <div class="grid grid-cols-2 gap-2 mt-2 font-mono text-[10px] text-slate-300">
+            <div class="p-1.5 rounded bg-slate-950/70 border border-white/5">
+              <span class="text-slate-500 block">Valvetrain:</span>
+              <span id="specValvetrain" class="text-cyan-300">DOHC 24V Dual VVT-iW</span>
+            </div>
+            <div class="p-1.5 rounded bg-slate-950/70 border border-white/5">
+              <span class="text-slate-500 block">Fuel Delivery:</span>
+              <span id="specFuelSystem" class="text-cyan-300">Toyota D-4ST Direct+Port</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Primary Flow Navigation Button -->
+        <button id="btnGoToInterview" class="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 transition active:scale-98">
+          <span>Start Diagnostic Interview</span>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </button>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN 2: DIAGNOSTIC INTERVIEW QUESTIONNAIRE -->
+      <!-- ========================================== -->
+      <section id="screen2" class="screen space-y-3.5">
+        <div>
+          <div class="text-cyan-400 text-[10px] font-bold font-mono tracking-wider uppercase mb-0.5">STEP 2 OF 4</div>
+          <h2 class="text-lg font-extrabold text-white leading-tight">Diagnostic Interview</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Answer 4 quick diagnostic questions to narrow the acoustic search space.</p>
+        </div>
+
+        <!-- Question 1: Operating Temperature -->
+        <div class="glass-card p-3.5 rounded-2xl border border-white/10 space-y-2">
+          <label class="text-xs font-bold text-white flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[10px] font-mono">1</span>
+            When does the engine noise occur?
+          </label>
+          <div class="grid grid-cols-2 gap-2 text-xs font-medium" id="qTimingGroup">
+            <button class="q-opt-btn p-2.5 rounded-xl border border-cyan-500/50 bg-cyan-950/40 text-cyan-200 text-left transition" data-val="cold_start">
+              <span class="block font-bold">Cold Start Only</span>
+              <span class="text-[10px] text-slate-400 font-normal">First 30–60s in morning</span>
+            </button>
+            <button class="q-opt-btn p-2.5 rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 text-left transition" data-val="warm_idle">
+              <span class="block font-bold">Warm Idle</span>
+              <span class="text-[10px] text-slate-400 font-normal">Constantly at 90°C</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Question 2: Sound Characteristic -->
+        <div class="glass-card p-3.5 rounded-2xl border border-white/10 space-y-2">
+          <label class="text-xs font-bold text-white flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[10px] font-mono">2</span>
+            What does the sound resemble?
+          </label>
+          <div class="grid grid-cols-2 gap-2 text-xs font-medium" id="qSoundTypeGroup">
+            <button class="q-sound-btn p-2.5 rounded-xl border border-cyan-500/50 bg-cyan-950/40 text-cyan-200 text-left transition" data-val="knock">
+              <span class="block font-bold">Deep Knock / Thud</span>
+              <span class="text-[10px] text-slate-400 font-normal">Heavy bottom-end pulse</span>
+            </button>
+            <button class="q-sound-btn p-2.5 rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 text-left transition" data-val="tick">
+              <span class="block font-bold">Metallic Ticking</span>
+              <span class="text-[10px] text-slate-400 font-normal">Sharp rapid clicks</span>
+            </button>
+            <button class="q-sound-btn p-2.5 rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 text-left transition" data-val="squeak">
+              <span class="block font-bold">High Squeak / Chirp</span>
+              <span class="text-[10px] text-slate-400 font-normal">Dry bearing whine</span>
+            </button>
+            <button class="q-sound-btn p-2.5 rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 text-left transition" data-val="rattle">
+              <span class="block font-bold">Gear Rattle / Roar</span>
+              <span class="text-[10px] text-slate-400 font-normal">Chattering phaser/chain</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Question 3: Throttle Reaction -->
+        <div class="glass-card p-3.5 rounded-2xl border border-white/10 space-y-2">
+          <label class="text-xs font-bold text-white flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[10px] font-mono">3</span>
+            Does the sound speed up with RPM?
+          </label>
+          <div class="grid grid-cols-2 gap-2 text-xs font-medium" id="qThrottleGroup">
+            <button class="q-rpm-btn p-2.5 rounded-xl border border-cyan-500/50 bg-cyan-950/40 text-cyan-200 text-left transition" data-val="rpm_linked">
+              <span class="block font-bold">Yes, Scales with Revs</span>
+              <span class="text-[10px] text-slate-400 font-normal">Frequency doubles</span>
+            </button>
+            <button class="q-rpm-btn p-2.5 rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 text-left transition" data-val="rpm_constant">
+              <span class="block font-bold">No, Constant Noise</span>
+              <span class="text-[10px] text-slate-400 font-normal">Steady hum or hiss</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex gap-2.5 pt-1">
+          <button id="btnBackToVehicle" class="w-1/3 py-3 rounded-2xl bg-slate-800 text-slate-300 font-bold text-xs uppercase tracking-wider transition">
+            Back
+          </button>
+          <button id="btnGoToProbe" class="w-2/3 py-3 rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-500/25 transition active:scale-98">
+            <span>Setup Earphone Probe</span>
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN 3: EARPHONE STETHOSCOPE PROBE & RECORD -->
+      <!-- ========================================== -->
+      <section id="screen3" class="screen space-y-3.5">
+        <div>
+          <div class="text-cyan-400 text-[10px] font-bold font-mono tracking-wider uppercase mb-0.5">STEP 3 OF 4</div>
+          <h2 class="text-lg font-extrabold text-white leading-tight">Earphone Stethoscope Probe</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Place your earphone microphone on the engine to isolate mechanical acoustics.</p>
+        </div>
+
+        <!-- How Earphone Stethoscope Works Infographic Box -->
+        <div class="glass-card p-3 rounded-2xl border border-cyan-500/30 bg-gradient-to-r from-mech-900 to-cyan-950/20 text-xs">
+          <div class="flex items-start gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 mt-0.5">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/></svg>
+            </div>
+            <div>
+              <span class="font-bold text-white text-xs block">Mechanic Stethoscope Hack</span>
+              <p class="text-[11px] text-slate-300 mt-0.5 leading-snug">
+                Placing an earphone mic directly against the engine metal acts as an acoustic contact probe, blocking out fan wind and radiator noise.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Engine Bay Placement Zones -->
+        <div class="glass-card p-3.5 rounded-2xl border border-white/10 space-y-2">
+          <span class="text-[11px] font-bold text-white uppercase tracking-wider block">Select Earphone Placement Zone:</span>
+          <div class="grid grid-cols-3 gap-1.5 text-center text-xs font-mono" id="probeZoneSelector">
+            <button class="probe-zone-btn p-2 rounded-xl border border-cyan-500/60 bg-cyan-950/50 text-cyan-300 transition" data-zone="valve">
+              <span class="block font-bold text-[11px]">Zone A</span>
+              <span class="text-[9px] text-slate-400">Valve Cover</span>
+            </button>
+            <button class="probe-zone-btn p-2 rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 transition" data-zone="belt">
+              <span class="block font-bold text-[11px]">Zone B</span>
+              <span class="text-[9px] text-slate-400">Front Belts</span>
+            </button>
+            <button class="probe-zone-btn p-2 rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 transition" data-zone="crank">
+              <span class="block font-bold text-[11px]">Zone C</span>
+              <span class="text-[9px] text-slate-400">Lower Block</span>
+            </button>
+          </div>
+          <p id="probeZoneTip" class="text-[10px] text-slate-400 font-mono mt-1">
+            📍 Zone A Target: Hold earphone mic 1 inch above valve cover to catch lifters & injectors.
+          </p>
+        </div>
+
+        <!-- Input Source Tabs (Mic/Earphone, File Upload, Synth) -->
+        <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 px-1">
+          <span>Input Channel:</span>
+          <div class="flex bg-slate-900 p-0.5 rounded-lg border border-white/10" id="inputModeSelector">
+            <button id="btnTabMic" class="px-2 py-0.5 rounded bg-indigo-600 text-white font-medium">Live Microphone</button>
+            <button id="btnTabUpload" class="px-2 py-0.5 rounded text-slate-400 hover:text-white">Upload File</button>
+            <button id="btnTabSynth" class="px-2 py-0.5 rounded text-slate-400 hover:text-white">Acoustic Synth</button>
+            <input type="file" id="mobileAudioUpload" accept="audio/*" class="hidden">
+          </div>
+        </div>
+
+        <!-- Real-Time Waveform & Spectrogram Canvas -->
+        <div class="glass-card p-3 rounded-2xl border border-white/10 space-y-2 bg-mech-950/90 shadow-inner">
+          <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
+            <span class="flex items-center gap-1.5 text-cyan-400 font-bold">
+              <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+              ACOUSTIC SPECTROGRAM (0-5 kHz)
+            </span>
+            <span id="mobilePeakFreq">Peak: 190 Hz (1.0×)</span>
+          </div>
+          <canvas id="mobileFftCanvas" class="w-full h-24 block rounded-lg bg-black"></canvas>
+          <div class="flex items-center justify-between text-[9px] font-mono text-slate-500">
+            <span id="mobileRpmDisplay">RPM: 750 (Idle)</span>
+            <span id="mobileKurtosisDisplay">Kurtosis: 24.8 (Metal Strike)</span>
+          </div>
+        </div>
+
+        <!-- 5-Second Capture Action Button -->
+        <div class="space-y-2 pt-1">
+          <button id="btnStartRecording" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 via-pink-600 to-indigo-600 hover:from-rose-400 hover:to-indigo-500 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-rose-500/25 transition active:scale-98">
+            <svg id="recordIcon" class="w-4 h-4 text-white animate-pulse" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"/></svg>
+            <span id="recordButtonText">Record 5s Acoustic Sample</span>
+          </button>
+
+          <!-- Back & Forward -->
+          <div class="flex gap-2">
+            <button id="btnBackToInterview" class="w-1/3 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs uppercase transition">
+              Back
+            </button>
+            <button id="btnGoToReport" class="w-2/3 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs uppercase transition flex items-center justify-center gap-1">
+              <span>View Diagnosis</span>
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- SCREEN 4: MECHANICAL DIAGNOSIS & TSB REPORT -->
+      <!-- ========================================== -->
+      <section id="screen4" class="screen space-y-3.5">
+        <div>
+          <div class="text-cyan-400 text-[10px] font-bold font-mono tracking-wider uppercase mb-0.5">STEP 4 OF 4</div>
+          <h2 class="text-lg font-extrabold text-white leading-tight">Mechanical Assessment</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Acoustic harmonic findings cross-referenced with vehicle TSBs.</p>
+        </div>
+
+        <!-- Triage Alert Banner -->
+        <div id="reportTriageBanner" class="p-3.5 rounded-2xl border flex items-center justify-between bg-rose-500/20 border-rose-400/40 text-rose-300">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
+            <div>
+              <span class="text-[10px] font-mono uppercase font-bold tracking-wider block" id="reportTriageLabel">CRITICAL ALERT</span>
+              <span class="text-xs font-extrabold text-white" id="reportTriageAction">Shut Down Engine Immediately</span>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-rose-950/80 border border-rose-400/40 text-rose-200" id="reportConfidencePill">
+            99.4% Match
+          </span>
+        </div>
+
+        <!-- Primary Fault Title & TSB Citation -->
+        <div class="glass-card p-3.5 rounded-2xl border border-white/10 space-y-1.5">
+          <span class="text-[10px] font-mono uppercase text-slate-400 block">Identified Mechanical Defect:</span>
+          <h3 id="reportFaultTitle" class="text-sm font-extrabold text-white leading-snug">
+            Crankshaft Main Bearing Failure & Loss of Motive Power
+          </h3>
+          <div class="flex flex-wrap gap-1.5 pt-1 text-[10px] font-mono">
+            <span id="reportTsbBadge" class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-400/30">
+              NHTSA Recall 24V-381 • Toyota 24TA07
+            </span>
+            <span id="reportKinematicPill" class="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/30">
+              1.0× Crankshaft Ratio
+            </span>
+          </div>
+        </div>
+
+        <!-- Acoustic Kinematic Explanation -->
+        <div class="p-3 rounded-2xl bg-mech-900 border border-white/10 space-y-1.5 text-xs text-slate-300">
+          <span class="text-[10px] font-bold text-white uppercase tracking-wide flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Kinematic Mechanical Finding:
+          </span>
+          <p id="reportExplanationText" class="text-[11px] leading-relaxed text-slate-300">
+            Detected heavy rotational knock at 190 Hz repeating at 1.0x crankshaft revolution. Machining debris clogs main bearing oil galleries.
+          </p>
+        </div>
+
+        <!-- Physical Verification Check -->
+        <div class="p-3 rounded-2xl bg-slate-900 border border-white/10 space-y-1 text-xs">
+          <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Recommended DIY Physical Check:
+          </span>
+          <p id="reportVerificationText" class="text-[11px] text-slate-300 leading-snug">
+            Pull engine oil dipstick and inspect under flashlight for brass/aluminum metallic flecks. Do not crank engine again.
+          </p>
+        </div>
+
+        <!-- Action Buttons (Copy Brief & Retest) -->
+        <div class="space-y-2 pt-1">
+          <button id="btnCopyMobileReport" class="w-full py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25 transition active:scale-98">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+            <span>Copy Mechanic Brief</span>
+          </button>
+
+          <button id="btnRestartWorkflow" class="w-full py-2.5 rounded-xl bg-slate-900 border border-white/10 text-slate-400 hover:text-white font-medium text-xs transition">
+            Start New Vehicle Diagnosis ↺
+          </button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Mobile Tab Bar Navigation -->
+    <nav class="absolute bottom-0 left-0 right-0 h-16 bg-mech-900/95 border-t border-white/10 backdrop-blur-xl flex items-center justify-around px-2 z-40">
+      <button class="nav-tab-btn flex flex-col items-center justify-center gap-0.5 text-cyan-400 w-16 transition" data-target="screen1">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        <span class="text-[9px] font-bold">Vehicle</span>
+      </button>
+
+      <button class="nav-tab-btn flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-300 w-16 transition" data-target="screen2">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+        <span class="text-[9px] font-bold">Interview</span>
+      </button>
+
+      <button class="nav-tab-btn flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-300 w-16 transition" data-target="screen3">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/></svg>
+        <span class="text-[9px] font-bold">Probe/Mic</span>
+      </button>
+
+      <button class="nav-tab-btn flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-300 w-16 transition" data-target="screen4">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span class="text-[9px] font-bold">Report</span>
+      </button>
+    </nav>
+
+    <!-- Mobile Toast Notification -->
+    <div id="mobileToast" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-indigo-600 text-white px-4 py-2 rounded-xl shadow-2xl text-[11px] font-semibold flex items-center gap-1.5 opacity-0 pointer-events-none transform translate-y-4 transition-all duration-300 whitespace-nowrap">
+      <svg class="w-3.5 h-3.5 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+      <span id="mobileToastText">Action complete</span>
+    </div>
+
+  </div>
+
+  <!-- Application Logic & Mobile Paging -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Audio State
+      let audioCtx = null;
+      let synthInterval = null;
+      let isPlaying = false;
+      let isMuted = false;
+      let currentPreset = 'tundra_gen3_35';
+      let activeZone = 'valve';
+      let interviewTiming = 'warm_idle';
+      let interviewSound = 'knock';
+      let interviewThrottle = 'rpm_linked';
+
+      // Canvases
+      const mobileFftCanvas = document.getElementById('mobileFftCanvas');
+      const fftCtx = mobileFftCanvas.getContext('2d');
+
+      function resizeCanvas() {
+        mobileFftCanvas.width = mobileFftCanvas.offsetWidth || 340;
+        mobileFftCanvas.height = mobileFftCanvas.offsetHeight || 96;
+      }
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      // Mobile Paging Controller
+      const screens = {
+        screen1: document.getElementById('screen1'),
+        screen2: document.getElementById('screen2'),
+        screen3: document.getElementById('screen3'),
+        screen4: document.getElementById('screen4'),
+      };
+
+      const stepBars = {
+        screen1: document.getElementById('stepBar1'),
+        screen2: document.getElementById('stepBar2'),
+        screen3: document.getElementById('stepBar3'),
+        screen4: document.getElementById('stepBar4'),
+      };
+
+      const stepSubtexts = {
+        screen1: 'Step 1: Vehicle Intelligence',
+        screen2: 'Step 2: Diagnostic Interview',
+        screen3: 'Step 3: Earphone Contact Probe',
+        screen4: 'Step 4: Mechanical Findings',
+      };
+
+      const stepNumbers = {
+        screen1: '1 / 4',
+        screen2: '2 / 4',
+        screen3: '3 / 4',
+        screen4: '4 / 4',
+      };
+
+      function navigateToScreen(targetScreenId) {
+        // Toggle screens
+        Object.keys(screens).forEach(id => {
+          screens[id].classList.remove('active');
+        });
+        screens[targetScreenId].classList.add('active');
+
+        // Stop audio if leaving probe screen
+        if (targetScreenId !== 'screen3' && isPlaying) {
+          stopAcousticPlayback();
+        }
+        // Scroll viewport to top
+        document.getElementById('screenViewport').scrollTop = 0;
+
+        // Update header subtext & badge
+        document.getElementById('headerSubtext').textContent = stepSubtexts[targetScreenId];
+        document.getElementById('headerStageBadge').textContent = stepNumbers[targetScreenId];
+
+        // Update progress bars
+        const stepNum = parseInt(targetScreenId.replace('screen', ''));
+        for (let i = 1; i <= 4; i++) {
+          const bar = document.getElementById(`stepBar${i}`);
+          if (i <= stepNum) {
+            bar.className = 'h-1 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)] transition-all';
+          } else {
+            bar.className = 'h-1 rounded-full bg-slate-800 transition-all';
+          }
+        }
+
+        // Update bottom navigation tab icons
+        document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+          if (btn.dataset.target === targetScreenId) {
+            btn.className = 'nav-tab-btn flex flex-col items-center justify-center gap-0.5 text-cyan-400 w-16 transition';
+          } else {
+            btn.className = 'nav-tab-btn flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-300 w-16 transition';
+          }
+        });
+      }
+
+      // Bottom nav tab clicks
+      document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => navigateToScreen(btn.dataset.target));
+      });
+
+      // Forward/Back Flow Buttons
+      document.getElementById('btnGoToInterview').addEventListener('click', () => navigateToScreen('screen2'));
+      document.getElementById('btnBackToVehicle').addEventListener('click', () => navigateToScreen('screen1'));
+      document.getElementById('btnGoToProbe').addEventListener('click', () => navigateToScreen('screen3'));
+      document.getElementById('btnBackToInterview').addEventListener('click', () => navigateToScreen('screen2'));
+      document.getElementById('btnGoToReport').addEventListener('click', () => {
+        runMechanicalSynthesis();
+        navigateToScreen('screen4');
+      });
+      document.getElementById('btnRestartWorkflow').addEventListener('click', () => navigateToScreen('screen1'));
+
+      // Toast notification helper
+      function showToast(message) {
+        const toast = document.getElementById('mobileToast');
+        document.getElementById('mobileToastText').textContent = message;
+        toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+        setTimeout(() => {
+          toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
+        }, 2500);
+      }
+
+      // Catalog Data Hierarchy (GCC Vehicles)
+      const catalogHierarchy = {
+        toyota: {
+          name: "Toyota",
+          models: {
+            tundra: {
+              name: "Tundra Pickup",
+              years: [
+                { key: 'tundra_gen3_35', label: '2022–2025: 3.5L Twin-Turbo V6 (V35A-FTS i-FORCE)' },
+                { key: 'tundra_gen2_57', label: '2007–2021: 5.7L V8 (3UR-FE i-FORCE)' },
+                { key: 'tundra_gen2_46', label: '2010–2019: 4.6L V8 (1UR-FE Dual VVT-i)' }
+              ]
+            },
+            lc300: {
+              name: "Land Cruiser 300",
+              years: [
+                { key: 'lc300_v35a', label: '2022–2025: 3.5L Twin-Turbo V6 (V35A-FTS)' }
+              ]
+            },
+            lc200: {
+              name: "Land Cruiser 200",
+              years: [
+                { key: 'lc200_1gr', label: '2008–2021: 4.0L V6 (1GR-FE Dual VVT-i)' },
+                { key: 'lc200_3ur', label: '2008–2021: 5.7L V8 (3UR-FE)' }
+              ]
+            },
+            prado: {
+              name: "Prado / Fortuner",
+              years: [
+                { key: 'lc200_1gr', label: '2010–2024: 4.0L V6 (1GR-FE Dual VVT-i)' },
+                { key: 'prado_2tr', label: '2010–2024: 2.7L 4-Cyl (2TR-FE)' }
+              ]
+            },
+            hilux: {
+              name: "Hilux Pickup",
+              years: [
+                { key: 'hilux_1gd', label: '2016–2025: 2.8L Turbo Diesel (1GD-FTV)' },
+                { key: 'prado_2tr', label: '2016–2025: 2.7L Petrol (2TR-FE)' }
+              ]
+            },
+            camry: {
+              name: "Camry / Avalon",
+              years: [
+                { key: 'camry_d4s', label: '2018–2025: 3.5L V6 (2GR-FKS D-4S)' },
+                { key: 'camry_2ar', label: '2012–2017: 2.5L 4-Cyl (2AR-FE)' }
+              ]
+            }
+          }
+        },
+        nissan: {
+          name: "Nissan",
+          models: {
+            patrol_y62: {
+              name: "Patrol Y62",
+              years: [
+                { key: 'patrol_y62', label: '2014–2025: 5.6L V8 (VK56VD 400 HP)' },
+                { key: 'patrol_y62_v6', label: '2017–2025: 4.0L V6 (VQ40DE 275 HP)' }
+              ]
+            },
+            patrol_y61: {
+              name: "Patrol Super Safari Y61",
+              years: [
+                { key: 'patrol_y61', label: '1997–2025: 4.8L Inline-6 (TB48DE)' }
+              ]
+            },
+            altima: {
+              name: "Altima / Sunny",
+              years: [
+                { key: 'altima_qr25', label: '2013–2024: 2.5L 4-Cyl (QR25DE)' },
+                { key: 'sunny_hr15', label: '2015–2024: 1.5L 4-Cyl (HR15DE)' }
+              ]
+            }
+          }
+        },
+        lexus: {
+          name: "Lexus",
+          models: {
+            lx600: {
+              name: "LX600",
+              years: [
+                { key: 'lexus_lx600', label: '2022–2025: 3.5L Twin-Turbo V6 (V35A-FTS)' }
+              ]
+            },
+            lx570: {
+              name: "LX570",
+              years: [
+                { key: 'lexus_lx570', label: '2008–2021: 5.7L V8 (3UR-FE)' }
+              ]
+            }
+          }
+        },
+        gmc: {
+          name: "GMC / Chevrolet",
+          models: {
+            yukon: {
+              name: "Yukon / Tahoe",
+              years: [
+                { key: 'gmc_yukon_53', label: '2015–2024: 5.3L EcoTec3 V8 (L83/L84)' }
+              ]
+            }
+          }
+        },
+        ford: {
+          name: "Ford",
+          models: {
+            f150: {
+              name: "F-150 / Raptor",
+              years: [
+                { key: 'ford_f150_35', label: '2017–2024: 3.5L EcoBoost Twin-Turbo V6' }
+              ]
+            }
+          }
+        },
+        mitsubishi: {
+          name: "Mitsubishi",
+          models: {
+            pajero: {
+              name: "Pajero",
+              years: [
+                { key: 'mitsu_pajero_38', label: '2007–2021: 3.8L V6 (6G75 MIVEC)' }
+              ]
+            }
+          }
+        },
+        hyundai: {
+          name: "Hyundai / Kia",
+          models: {
+            sonata: {
+              name: "Sonata / Optima",
+              years: [
+                { key: 'hyundai_sonata_24', label: '2011–2019: 2.4L Theta II GDI' }
+              ]
+            }
+          }
+        }
+      };
+
+      // Vehicle Profiles & TSB Database
+      const vehicleProfiles = {
+        tundra_gen3_35: {
+          name: "Toyota Tundra (2022–2025 Gen 3)",
+          engine: "3.5L Twin-Turbo V6 (V35A-FTS)",
+          valvetrain: "DOHC 24V Dual VVT-iW",
+          fuel: "D-4ST Direct+Port",
+          rpm: 750,
+          peakHz: 190,
+          ratio: 1.0,
+          kurtosis: 24.8,
+          triage: "CRITICAL RECALL",
+          triageClass: "bg-rose-500/20 text-rose-300 border-rose-400/40",
+          actionLabel: "Shut Down Engine Immediately",
+          confidence: "99.4% Match",
+          tsb: "NHTSA Recall 24V-381 • Toyota 24TA07",
+          title: "Crankshaft Main Bearing Failure & Loss of Motive Power",
+          explanation: "Heavy rotational knock at 190 Hz at 1.0x crank speed (12.5 Hz). On 2022-2023 Tundra models, machining debris blocks oil passages, wiping crankshaft main bearings.",
+          verification: "Pull engine dipstick and check under flashlight for metallic brass/aluminum flake. Do not restart engine. Covered under free Toyota engine replacement recall.",
+          synthType: "rod"
+        },
+        tundra_gen2_57: {
+          name: "Toyota Tundra (2007–2021 Gen 2)",
+          engine: "5.7L V8 (3UR-FE i-FORCE)",
+          valvetrain: "DOHC 32V Dual VVT-i",
+          fuel: "Sequential EFI",
+          rpm: 1200,
+          peakHz: 1100,
+          ratio: 1.0,
+          kurtosis: 11.5,
+          triage: "ADVISORY FAULT",
+          triageClass: "bg-amber-500/20 text-amber-300 border-amber-400/40",
+          actionLabel: "Schedule Emission Service",
+          confidence: "97.5% Match",
+          tsb: "Toyota TSB T-SB-0029-14",
+          title: "Secondary Air Injection Switching Valve Stuck Open",
+          explanation: "Loud vacuum cleaner roar under passenger front fender on cold morning start. Moisture and dust intrusion cause air switching valves to stick open.",
+          verification: "Listen directly in front of the right wheel well on cold start. Roar will shut off abruptly after 45 seconds when air pump cycle ends.",
+          synthType: "lifter"
+        },
+        tundra_gen2_46: {
+          name: "Toyota Tundra (2010–2019 Gen 2)",
+          engine: "4.6L V8 (1UR-FE)",
+          valvetrain: "DOHC 32V Dual VVT-i",
+          fuel: "Sequential EFI",
+          rpm: 650,
+          peakHz: 3400,
+          ratio: 2.7,
+          kurtosis: 9.2,
+          triage: "DESERT WEAR ADVISORY",
+          triageClass: "bg-amber-500/20 text-amber-300 border-amber-400/40",
+          actionLabel: "Inspect Cooling Water Pump",
+          confidence: "94.2% Match",
+          tsb: "Toyota Service Bulletin T-SB-0091-11",
+          title: "Water Pump Bearing Dry Chirp & Pink Coolant Weep",
+          explanation: "High frequency squeak at 3,400 Hz from water pump shaft seal wear, accelerated by dry desert climate and high summer A/C load.",
+          verification: "Inspect water pump weep hole for dried pink coolant crusting. Spray water mist on belt: if noise persists, replace pump.",
+          synthType: "pulley"
+        },
+        lc300_v35a: {
+          name: "Toyota Land Cruiser 300",
+          engine: "3.5L Twin-Turbo V6 (V35A-FTS)",
+          valvetrain: "DOHC 24V Dual VVT-iW",
+          fuel: "Toyota D-4ST",
+          rpm: 780,
+          peakHz: 195,
+          ratio: 1.0,
+          kurtosis: 24.2,
+          triage: "CRITICAL RECALL",
+          triageClass: "bg-rose-500/20 text-rose-300 border-rose-400/40",
+          actionLabel: "Stop Engine Immediately",
+          confidence: "98.6% Match",
+          tsb: "Toyota Campaign 24V-381 / GCC Special Campaign",
+          title: "Crankshaft Main Bearing Failure (Machining Debris)",
+          explanation: "Dull, heavy rotational thud at 195 Hz pulsating at 1.0x crankshaft revolution. Machining debris causes oil starvation to main journal bearings.",
+          verification: "Shut down engine immediately. Covered under Toyota GCC Special Service Campaign for complete engine short-block replacement.",
+          synthType: "rod"
+        },
+        lc200_1gr: {
+          name: "Toyota Land Cruiser 200 / Prado",
+          engine: "4.0L V6 (1GR-FE Dual VVT-i)",
+          valvetrain: "DOHC 24V Dual VVT-i",
+          fuel: "Electronic Multi-Point EFI",
+          rpm: 820,
+          peakHz: 3820,
+          ratio: 2.8,
+          kurtosis: 9.4,
+          triage: "DESERT WEAR ADVISORY",
+          triageClass: "bg-amber-500/20 text-amber-300 border-amber-400/40",
+          actionLabel: "Replace Idler Pulley Assembly",
+          confidence: "95.2% Match",
+          tsb: "Toyota GCC Service Bulletin ENG-048",
+          title: "Water Pump & Idler Pulley Bearing Dry Squeak",
+          explanation: "Metallic continuous chirp at 3,820 Hz oscillating at 2.8x engine speed. Dune sand ingress into sealed bearings under 50°C A/C compressor strain.",
+          verification: "Spray light water mist onto the serpentine belt. If sound continues unchanged, replace idler pulley assembly (#16603-31040).",
+          synthType: "pulley"
+        },
+        patrol_y62: {
+          name: "Nissan Patrol Y62 (400 HP)",
+          engine: "5.6L V8 (VK56VD VVEL)",
+          valvetrain: "DOHC 32V VVEL",
+          fuel: "Direct Injection Gasoline",
+          rpm: 650,
+          peakHz: 1650,
+          ratio: 0.5,
+          kurtosis: 13.6,
+          triage: "COMMON Y62 DEFECT",
+          triageClass: "bg-amber-500/20 text-amber-300 border-amber-400/40",
+          actionLabel: "Inspect Fuel Pump Follower",
+          confidence: "94.4% Match",
+          tsb: "Nissan TSB NTB12-075 • Bank 1",
+          title: "HPFP Bucket Tappet Wear / Timing Chain Slack",
+          explanation: "Metallic clicking on passenger-side cylinder head (Bank 1) at exactly 0.5x camshaft speed. Mechanical high-pressure pump bucket follower wear.",
+          verification: "Use mechanic stethoscope directly on Bank 1 HPFP flange. Check timing chain stretch via diagnostic scanner.",
+          synthType: "lifter"
+        },
+        camry_d4s: {
+          name: "Toyota Camry / Avalon V6",
+          engine: "3.5L V6 (2GR-FKS D-4S)",
+          valvetrain: "DOHC 24V VVT-iW",
+          fuel: "D-4S Dual Injection",
+          rpm: 700,
+          peakHz: 2950,
+          ratio: 0.5,
+          kurtosis: 7.8,
+          triage: "FACTORY NORMAL",
+          triageClass: "bg-emerald-500/20 text-emerald-300 border-emerald-400/40",
+          actionLabel: "No Repair Necessary",
+          confidence: "99.1% Match",
+          tsb: "Toyota Bulletin T-SB-0083-16",
+          title: "Normal Toyota D-4S Direct Fuel Injection Pulse",
+          explanation: "Rhythmic metallic clicking at 2,950 Hz at 0.5x camshaft cycle. 2,000 PSI direct fuel injectors firing at idle. Completely normal operation.",
+          verification: "No action required. Normal direct injection noise will decrease slightly once engine reaches full operating temperature.",
+          synthType: "gdi"
+        }
+      };
+
+      // Populate Make, Model, Year Dropdowns
+      const selectMake = document.getElementById('selectMake');
+      const selectModel = document.getElementById('selectModel');
+      const selectYear = document.getElementById('selectYear');
+
+      function updateModelDropdown(makeKey, defaultModelKey) {
+        const makeObj = catalogHierarchy[makeKey];
+        if (!makeObj) return;
+        selectModel.innerHTML = '';
+        const modelKeys = Object.keys(makeObj.models);
+        modelKeys.forEach(mKey => {
+          const opt = document.createElement('option');
+          opt.value = mKey;
+          opt.textContent = makeObj.models[mKey].name;
+          if (mKey === defaultModelKey) opt.selected = true;
+          selectModel.appendChild(opt);
+        });
+        const activeModel = defaultModelKey || modelKeys[0];
+        updateYearDropdown(makeKey, activeModel);
+      }
+
+      function updateYearDropdown(makeKey, modelKey, defaultPresetKey) {
+        const makeObj = catalogHierarchy[makeKey];
+        if (!makeObj || !makeObj.models[modelKey]) return;
+        selectYear.innerHTML = '';
+        const years = makeObj.models[modelKey].years;
+        years.forEach(y => {
+          const opt = document.createElement('option');
+          opt.value = y.key;
+          opt.textContent = y.label;
+          if (y.key === defaultPresetKey) opt.selected = true;
+          selectYear.appendChild(opt);
+        });
+        const activePreset = defaultPresetKey || (years[0] ? years[0].key : null);
+        if (activePreset) {
+          applyVehiclePreset(activePreset);
+        }
+      }
+
+      function applyVehiclePreset(presetKey) {
+        if (!vehicleProfiles[presetKey]) return;
+        currentPreset = presetKey;
+        const profile = vehicleProfiles[presetKey];
+
+        document.getElementById('activeProfileName').textContent = profile.name;
+        document.getElementById('specValvetrain').textContent = profile.valvetrain;
+        document.getElementById('specFuelSystem').textContent = profile.fuel;
+
+        document.getElementById('mobilePeakFreq').textContent = `Peak: ${profile.peakHz} Hz (${profile.ratio}×)`;
+        document.getElementById('mobileRpmDisplay').textContent = `RPM: ${profile.rpm} (Idle)`;
+        document.getElementById('mobileKurtosisDisplay').textContent = `Kurtosis: ${profile.kurtosis} (${profile.kurtosis > 15 ? 'Metal Strike' : 'Controlled'})`;
+      }
+
+      // Initial populate
+      updateModelDropdown('toyota', 'tundra');
+
+      selectMake.addEventListener('change', () => {
+        updateModelDropdown(selectMake.value);
+      });
+      selectModel.addEventListener('change', () => {
+        updateYearDropdown(selectMake.value, selectModel.value);
+      });
+      selectYear.addEventListener('change', () => {
+        applyVehiclePreset(selectYear.value);
+      });
+
+      // VIN Auto-Decoder
+      function decodeVIN(vinString) {
+        if (!vinString || vinString.length < 3) {
+          showToast("Enter at least 10 characters of the VIN");
+          return;
+        }
+        const clean = vinString.trim().toUpperCase();
+        const wmi = clean.substring(0, 3);
+        const yearChar = clean.length >= 10 ? clean.charAt(9) : '';
+
+        let makeKey = 'toyota';
+        let modelKey = 'tundra';
+        let presetKey = 'tundra_gen3_35';
+
+        if (wmi.startsWith('5TF') || wmi.startsWith('5TB')) {
+          makeKey = 'toyota';
+          modelKey = 'tundra';
+          presetKey = ['N', 'P', 'R', 'S'].includes(yearChar) ? 'tundra_gen3_35' : 'tundra_gen2_57';
+        } else if (wmi.startsWith('JTM') || wmi.startsWith('JTE')) {
+          makeKey = 'toyota';
+          modelKey = 'lc300';
+          presetKey = ['N', 'P', 'R', 'S'].includes(yearChar) ? 'lc300_v35a' : 'lc200_1gr';
+        } else if (wmi.startsWith('JN8')) {
+          makeKey = 'nissan';
+          modelKey = 'patrol_y62';
+          presetKey = 'patrol_y62';
+        }
+
+        selectMake.value = makeKey;
+        updateModelDropdown(makeKey, modelKey);
+        selectYear.value = presetKey;
+        applyVehiclePreset(presetKey);
+
+        showToast(`VIN Decoded: ${vehicleProfiles[presetKey].name}`);
+      }
+
+      document.getElementById('btnDecodeVin').addEventListener('click', () => {
+        decodeVIN(document.getElementById('vinInput').value);
+      });
+      document.querySelectorAll('.sample-vin-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.getElementById('vinInput').value = btn.dataset.vin;
+          decodeVIN(btn.dataset.vin);
+        });
+      });
+
+      // Diagnostic Interview Questionnaire Logic
+      document.querySelectorAll('#qTimingGroup .q-opt-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#qTimingGroup .q-opt-btn').forEach(b => {
+            b.className = "q-opt-btn p-2.5 rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 text-left transition";
+          });
+          btn.className = "q-opt-btn p-2.5 rounded-xl border border-cyan-500/50 bg-cyan-950/40 text-cyan-200 text-left transition";
+          interviewTiming = btn.dataset.val;
+        });
+      });
+
+      document.querySelectorAll('#qSoundTypeGroup .q-sound-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#qSoundTypeGroup .q-sound-btn').forEach(b => {
+            b.className = "q-sound-btn p-2.5 rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 text-left transition";
+          });
+          btn.className = "q-sound-btn p-2.5 rounded-xl border border-cyan-500/50 bg-cyan-950/40 text-cyan-200 text-left transition";
+          interviewSound = btn.dataset.val;
+        });
+      });
+
+      document.querySelectorAll('#qThrottleGroup .q-rpm-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#qThrottleGroup .q-rpm-btn').forEach(b => {
+            b.className = "q-rpm-btn p-2.5 rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 text-left transition";
+          });
+          btn.className = "q-rpm-btn p-2.5 rounded-xl border border-cyan-500/50 bg-cyan-950/40 text-cyan-200 text-left transition";
+          interviewThrottle = btn.dataset.val;
+        });
+      });
+
+      // Earphone Probe Placement Selector
+      const probeTips = {
+        valve: "📍 Zone A: Place earphone mic on engine valve cover. Ideal for camshaft lifters & direct fuel injectors.",
+        belt: "📍 Zone B: Hold earphone mic near water pump & idler pulley. Ideal for bearing squeak & belt chirp.",
+        crank: "📍 Zone C: Place earphone mic on lower oil pan or front wheel well. Ideal for connecting rod & crankshaft knocks."
+      };
+
+      document.querySelectorAll('#probeZoneSelector .probe-zone-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#probeZoneSelector .probe-zone-btn').forEach(b => {
+            b.className = "probe-zone-btn p-2 rounded-xl border border-white/10 bg-slate-900/60 text-slate-300 transition";
+          });
+          btn.className = "probe-zone-btn p-2 rounded-xl border border-cyan-500/60 bg-cyan-950/50 text-cyan-300 transition";
+          activeZone = btn.dataset.zone;
+          document.getElementById('probeZoneTip').textContent = probeTips[activeZone];
+        });
+      });
+
+      // Web Audio API Synthesizer & Canvas Rendering
+      function initAudioContext() {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) audioCtx = new AudioContextClass();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      }
+
+      function playMechanicalPulse(type) {
+        if (!audioCtx || isMuted) return;
+        const now = audioCtx.currentTime;
+
+        if (type === 'rod') {
+          // Deep rotational knock
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(190, now);
+          osc.frequency.exponentialRampToValueAtTime(45, now + 0.08);
+          gain.gain.setValueAtTime(0.45, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } else if (type === 'pulley') {
+          // High squeak
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(3820, now);
+          osc.frequency.linearRampToValueAtTime(3600, now + 0.05);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.05);
+        } else if (type === 'gdi') {
+          // Direct injector tick
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'highpass';
+          osc.frequency.setValueAtTime(2950, now);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.02);
+        } else {
+          // Lifter / air roar
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(1450, now);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.04);
+        }
+      }
+
+      function startAcousticSynth() {
+        initAudioContext();
+        if (synthInterval) clearInterval(synthInterval);
+        isPlaying = true;
+        const profile = vehicleProfiles[currentPreset];
+        const pulseInterval = Math.round(1000 / ((profile.rpm / 60) * profile.ratio));
+
+        synthInterval = setInterval(() => {
+          playMechanicalPulse(profile.synthType);
+        }, pulseInterval);
+
+        // Update global stop bar
+        const bar = document.getElementById('globalAudioBar');
+        if (bar) {
+          bar.classList.remove('hidden');
+          document.getElementById('globalAudioLabel').textContent = `Sound Active: ${profile.peakHz}Hz ${profile.name.split('(')[0]}`;
+        }
+      }
+
+      function stopAcousticPlayback() {
+        isPlaying = false;
+        if (synthInterval) {
+          clearInterval(synthInterval);
+          synthInterval = null;
+        }
+        const bar = document.getElementById('globalAudioBar');
+        if (bar) bar.classList.add('hidden');
+
+        // Reset synth tab style
+        const btnTabSynth = document.getElementById('btnTabSynth');
+        if (btnTabSynth) {
+          btnTabSynth.className = "px-2 py-0.5 rounded text-slate-400 hover:text-white";
+        }
+        const btnStartRecording = document.getElementById('btnStartRecording');
+        if (btnStartRecording) {
+          btnStartRecording.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 via-pink-600 to-indigo-600 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-rose-500/25 transition active:scale-98";
+          document.getElementById('recordButtonText').textContent = "Record 5s Acoustic Sample";
+        }
+      }
+
+      // 5-Second Record Countdown Trigger
+      const btnStartRecording = document.getElementById('btnStartRecording');
+      let recordTimer = null;
+      let recordSeconds = 5;
+
+      btnStartRecording.addEventListener('click', () => {
+        initAudioContext();
+        if (isPlaying) {
+          stopAcousticPlayback();
+          btnStartRecording.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 via-pink-600 to-indigo-600 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-rose-500/25 transition active:scale-98";
+          document.getElementById('recordButtonText').textContent = "Record 5s Acoustic Sample";
+          return;
+        }
+
+        // Start 5-second countdown
+        recordSeconds = 5;
+        startAcousticSynth();
+        btnStartRecording.className = "w-full py-3.5 rounded-2xl bg-emerald-600 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/30 transition active:scale-98";
+        document.getElementById('recordButtonText').textContent = `Listening... (${recordSeconds}s)`;
+
+        recordTimer = setInterval(() => {
+          recordSeconds--;
+          if (recordSeconds > 0) {
+            document.getElementById('recordButtonText').textContent = `Listening... (${recordSeconds}s)`;
+          } else {
+            clearInterval(recordTimer);
+            stopAcousticPlayback();
+            btnStartRecording.className = "w-full py-3.5 rounded-2xl bg-indigo-600 text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-indigo-500/25 transition active:scale-98";
+            document.getElementById('recordButtonText').textContent = "Analysis Complete ✓ View Report";
+            showToast("5-Second Acoustic Sample Captured!");
+            setTimeout(() => {
+              runMechanicalSynthesis();
+              navigateToScreen('screen4');
+            }, 800);
+          }
+        }, 1000);
+      });
+
+      // Canvas Animation Loop
+      let frame = 0;
+      function drawMobileVisualizer() {
+        const w = mobileFftCanvas.width;
+        const h = mobileFftCanvas.height;
+        fftCtx.clearRect(0, 0, w, h);
+
+        const profile = vehicleProfiles[currentPreset];
+        const numBars = 36;
+        const barWidth = (w / numBars) - 2;
+
+        for (let i = 0; i < numBars; i++) {
+          let barHeight = 6;
+          if (isPlaying) {
+            const freq = (i / numBars) * 5000;
+            const dist = Math.abs(freq - profile.peakHz);
+            if (dist < 400) {
+              barHeight = 20 + ((1 - dist / 400) * (h - 30)) + (Math.sin(frame * 0.3 + i) * 6);
+            } else {
+              barHeight = 8 + (Math.sin(i * 0.4 + frame * 0.1) * 6);
+            }
+          }
+
+          barHeight = Math.max(4, Math.min(h - 8, barHeight));
+
+          const grad = fftCtx.createLinearGradient(0, h, 0, h - barHeight);
+          if (profile.triage.includes("CRITICAL")) {
+            grad.addColorStop(0, 'rgba(244, 63, 94, 0.9)');
+            grad.addColorStop(1, 'rgba(251, 191, 36, 0.95)');
+          } else if (profile.triage.includes("NORMAL")) {
+            grad.addColorStop(0, 'rgba(16, 185, 129, 0.9)');
+            grad.addColorStop(1, 'rgba(6, 182, 212, 0.95)');
+          } else {
+            grad.addColorStop(0, 'rgba(99, 102, 241, 0.9)');
+            grad.addColorStop(1, 'rgba(245, 158, 11, 0.95)');
+          }
+
+          fftCtx.fillStyle = grad;
+          fftCtx.beginPath();
+          fftCtx.roundRect(i * (barWidth + 2), h - barHeight, barWidth, barHeight, [2, 2, 0, 0]);
+          fftCtx.fill();
+        }
+
+        frame++;
+        requestAnimationFrame(drawMobileVisualizer);
+      }
+      requestAnimationFrame(drawMobileVisualizer);
+
+      // Mechanical Synthesis & Report Population
+      function runMechanicalSynthesis() {
+        const profile = vehicleProfiles[currentPreset];
+
+        // Triage banner
+        const banner = document.getElementById('reportTriageBanner');
+        banner.className = `p-3.5 rounded-2xl border flex items-center justify-between ${profile.triageClass}`;
+        document.getElementById('reportTriageLabel').textContent = profile.triage;
+        document.getElementById('reportTriageAction').textContent = profile.actionLabel;
+        document.getElementById('reportConfidencePill').textContent = profile.confidence;
+
+        // Content
+        document.getElementById('reportFaultTitle').textContent = profile.title;
+        document.getElementById('reportTsbBadge').textContent = profile.tsb;
+        document.getElementById('reportKinematicPill').textContent = `${profile.ratio}× Kinematic Ratio`;
+        document.getElementById('reportExplanationText').textContent = profile.explanation;
+        document.getElementById('reportVerificationText').textContent = profile.verification;
+      }
+
+      // Copy Technician Brief
+      document.getElementById('btnCopyMobileReport').addEventListener('click', () => {
+        const profile = vehicleProfiles[currentPreset];
+        const brief = `[ACOUSTIC MECHANIC - DIAGNOSTIC BRIEF]
+Vehicle: ${profile.name}
+Engine: ${profile.engine} (${profile.valvetrain})
+Acoustic Telemetry: Peak at ${profile.peakHz} Hz (${profile.ratio}x Crankshaft Ratio)
+Triage Level: ${profile.triage} (${profile.confidence})
+Identified Defect: ${profile.title}
+Official Bulletin: ${profile.tsb}
+Kinematic Finding: ${profile.explanation}
+Verification: ${profile.verification}
+Generated via Acoustic Mechanic Mobile Contact Probe.`;
+
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(brief).catch(() => {
+            const el = document.createElement('textarea');
+            el.value = brief;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+          });
+        }
+        showToast("Technician brief copied to clipboard!");
+      });
+
+      // Audio File Upload support
+      const btnTabMic = document.getElementById('btnTabMic');
+      const btnTabSynth = document.getElementById('btnTabSynth');
+      const btnTabUpload = document.getElementById('btnTabUpload');
+
+      btnTabMic.addEventListener('click', () => {
+        btnTabMic.className = "px-2 py-0.5 rounded bg-indigo-600 text-white font-medium";
+        btnTabSynth.className = "px-2 py-0.5 rounded text-slate-400 hover:text-white";
+        btnTabUpload.className = "px-2 py-0.5 rounded text-slate-400 hover:text-white";
+        stopAcousticPlayback();
+        showToast("Earphone / Microphone Mode Active");
+      });
+
+      btnTabSynth.addEventListener('click', () => {
+        if (isPlaying) {
+          stopAcousticPlayback();
+          showToast("Sound Stopped ⏹");
+        } else {
+          btnTabSynth.className = "px-2 py-0.5 rounded bg-indigo-600 text-white font-medium";
+          btnTabMic.className = "px-2 py-0.5 rounded text-slate-400 hover:text-white";
+          btnTabUpload.className = "px-2 py-0.5 rounded text-slate-400 hover:text-white";
+          startAcousticSynth();
+          showToast("Playing Sample (Tap again to stop) 🔊");
+        }
+      });
+
+      // Global Stop Button Listener
+      const btnGlobalStopAudio = document.getElementById('btnGlobalStopAudio');
+      if (btnGlobalStopAudio) {
+        btnGlobalStopAudio.addEventListener('click', () => {
+          stopAcousticPlayback();
+          showToast("Audio stopped ⏹");
+        });
+      }
+      const mobileAudioUpload = document.getElementById('mobileAudioUpload');
+      btnTabUpload.addEventListener('click', () => mobileAudioUpload.click());
+
+      mobileAudioUpload.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        initAudioContext();
+        try {
+          const buffer = await file.arrayBuffer();
+          const decoded = await audioCtx.decodeAudioData(buffer);
+          showToast(`Loaded ${file.name} (${decoded.duration.toFixed(1)}s)`);
+          document.getElementById('recordButtonText').textContent = "Analyze Uploaded File";
+        } catch (err) {
+          showToast("Could not decode audio format");
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+
